@@ -1,3 +1,16 @@
+# TO RUN THE WEB APP.
+First, you need to have installed docker/docker-compose in your computer and also git.
+Initialize docker and clone the repo in the desired folder
+Once you do that, from the folder that has de docker-compose.yml file run the command "docker-compose build" and once it fininshes run "docker-compose up" to connect the database, the interrupt with "Ctrl+C" and tun the command docker-compose run --rm server sh -c "python manage.py makemigrations" then run docker-compose build again and the server will be available in http://localhost:8000/api (you can check that link in your browser, you will have the DRF default documentation available) and the client will be available in http://localhost:3000
+
+
+# HOW TO USE THE APP
+
+Once you have the server and the client running, you can browse to the client url and register the repo you want to manage (with the link an the name), this web app is intended to manage cloned repos locally, it does not manage the remote repo since we wanted to avoid Github authentication bc it would difficult the review of the web app.
+
+After you do that you will be redirected to the a view with a list of branches, this could take some seconds, bc in this step, the databse is being populated witha ll the information of your repo. then you can access to all the information such as branch details, commits details, create prs, manage prs and more.
+
+
 # fullstack-interview-test
 Interview test for fullstack Software Engineers
 
