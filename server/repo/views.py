@@ -37,8 +37,8 @@ class RepoViewSet(ModelViewSet):
             repo_i = get_repo_instance(repo[0].name, repo[0].link)
             for ref in repo_i.references:
                 new_branch, created = Branch.objects.get_or_create(
-                    repo = repo[0],
                     name=ref.name,
+                    defaults={'repo':repo[0]},
                 )
                 for commit in repo_i.iter_commits(rev=ref.name):
                     Commit.objects.get_or_create(
@@ -46,6 +46,8 @@ class RepoViewSet(ModelViewSet):
                         author=commit.author,
                         created_at=commit.authored_datetime,
                         branch = new_branch,
+                        email = commit.author.email,
+                        files_changed = len(commit.stats.files)
                     )
 
 

@@ -16,6 +16,13 @@ class RepoSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class CommitSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Commit
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
 
 class BranchSerializer(serializers.ModelSerializer):
     repo = RepoSerializer(read_only=True)
@@ -25,34 +32,20 @@ class BranchSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
+    commits = serializers.SerializerMethodField()
+
+    def get_commits(self, obj):
+        commits = Commit.objects.filter(branch_id=obj.id)
+        serializer = CommitSerializer(commits, many=True)
+        return serializer.data
+
 
     class Meta:
         model = Branch
-        fields = ['name', 'repo', 'id', 'repo_id']
+        fields = ['name', 'repo', 'id', 'repo_id', 'commits']
         reead_only_fields = ['id']
 
 
-
-class CommitSerializer(serializers.ModelSerializer):
-    branch = BranchSerializer(required=False, read_only=True)
-    branch_id = serializers.PrimaryKeyRelatedField(
-        source="branch",
-        queryset=Branch.objects.all(),
-        write_only=True,
-        required=False,
-    )
-
-    class Meta:
-        model = Commit
-        fields = [
-            'id',
-            'branch_id',
-            'branch',
-            'author',
-            'message',
-            'created_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 
@@ -85,21 +78,23 @@ class PullRequestSerializer(serializers.ModelSerializer):
             'title',
             'description',
             'status',
+            'id',
         ]
 
     def validate(self,attrs):
-        repo_name = attrs['base_branch'].repo.name
-        repo_link = attrs['base_branch'].repo.link
+        if attrs['status'] == 'MERGED':
+            try:
+                repo_name = attrs['base_branch'].repo.name
+                repo_link = attrs['base_branch'].repo.link
 
-        repo_i = get_repo_instance(repo_name, repo_link)
+                repo_i = get_repo_instance(repo_name, repo_link)
 
-        git_base_branch = repo_i.references[attrs['base_branch'].name]
-        git_compare_branch = repo_i.references[attrs['compare_branch'].name]
-
-        base = repo_i.merge_base(git_compare_branch, git_base_branch)
-        repo_i.index.merge_tree(git_base_branch, base=base)
-        repo_i.index.commit('Merge to branches',
-        parent_commits=(git_compare_branch.commit, git_base_branch.commit))
+                o = repo_i.remotes.origin
+                repo_i.git.checkout(attrs['base_branch'].name)
+                o.pull()
+                repo_i.git.merge(attrs['compare_branch'].name)
+            except:
+                raise ValidationError('The branches cannot be merged')
 
         return super().validate(attrs)
 
