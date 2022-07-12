@@ -1,9 +1,3 @@
-
-from shutil import rmtree
-from os import path
-
-from django.conf import settings
-
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import BasePermission
 
@@ -19,17 +13,7 @@ from repo.serializers import (
     BranchSerializer,
     PullRequestSerializer
 )
-
-from git import Repo as GitRepo, remote
-
-
-def get_repo_instance(name, link):
-    repo_dir = f'{settings.BASE_DIR}/tmp/{name}'
-    try:
-        repo_instance = GitRepo.clone_from(link, repo_dir)
-    except:
-        repo_instance = GitRepo(repo_dir)
-    return repo_instance
+from repo.utils import get_repo_instance
 
 
 class RepoViewSet(ModelViewSet):
@@ -48,11 +32,22 @@ class RepoViewSet(ModelViewSet):
 
     def retrieve(self, request, pk=None):
         repo=Repo.objects.filter(pk=pk)
+
         if repo.exists():
-            repo_instance = get_repo_instance(repo[0].name, repo[0].link)
-            git_remote = remote.Remote(repo_instance, repo[0].link)
-            git_remote.pull('refs/heads/master:refs/heads/origin')
-            print(repo_instance.branches)
+            repo_i = get_repo_instance(repo[0].name, repo[0].link)
+            for ref in repo_i.references:
+                new_branch, created = Branch.objects.get_or_create(
+                    repo = repo[0],
+                    name=ref.name,
+                )
+                for commit in repo_i.iter_commits(rev=ref.name):
+                    Commit.objects.get_or_create(
+                        message=commit.message,
+                        author=commit.author,
+                        created_at=commit.authored_datetime,
+                        branch = new_branch,
+                    )
+
 
         return super().retrieve(self,request, pk)
 
@@ -70,10 +65,10 @@ class BranchViewSet(ModelViewSet):
 
 
 
-
 class PullRequestViewSet(ModelViewSet):
     serializer_class = PullRequestSerializer
     queryset = PullRequest.objects.all()
+
 
 
 

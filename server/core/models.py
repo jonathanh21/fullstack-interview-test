@@ -28,7 +28,7 @@ class Branch(models.Model):
         'Repo',
         on_delete=models.CASCADE,
     )
-    name = models.CharField(max_length=255, null=False, blank=False)
+    name = models.CharField(max_length=255, null=False, blank=False, unique=True)
 
     def __str__(self):
         return self.name
@@ -37,23 +37,21 @@ class Branch(models.Model):
 
 class Commit(models.Model):
 
+    author = models.CharField(max_length=255)
+    message = models.TextField()
+    created_at = models.DateTimeField()
     branch = models.ForeignKey(
         'Branch',
         on_delete=models.CASCADE,
     )
-    name = models.CharField(max_length=255, null=False, blank=False)
-    author = models.CharField(max_length=255)
-    message = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
 
 
 
-class PullRequest(models.Model):
 
+class PullRequest(models.Model):
     base_branch = models.ForeignKey(
         'Branch',
         on_delete=models.CASCADE,
